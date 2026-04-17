@@ -34,6 +34,14 @@ final actor Llama {
                 print("Running on simulator, force use n_gpu_layers = 0")
         #endif
 
+        let forceCPUOnlyPath: Bool = {
+            #if targetEnvironment(simulator)
+            return true
+            #else
+            return false
+            #endif
+        }()
+
         let model = LlamaModel(path: modelPath, parameters: model_params)
         guard let model else {
             print("Could not load model at \(modelPath)")
@@ -50,6 +58,17 @@ final actor Llama {
         contextParam.n_batch = config.batchSize
         contextParam.n_ubatch = config.batchSize
         contextParam.offload_kqv = true
+
+        // On the iOS Simulator the Metal backend reports MTLGPUFamilyApple2,
+        // which lacks simdgroup reduction / matmul. With Flash Attention on
+        // AUTO, llama.cpp auto-enables it and the forward pass silently
+        // produces zero logits (n_outputs = 0) — then the sampler aborts.
+        // Force Flash Attention off and skip KV offload on simulator.
+        if forceCPUOnlyPath {
+            contextParam.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED
+            contextParam.offload_kqv = false
+            print("Running on simulator, force disable Flash Attention + KV offload")
+        }
 
         let context = LlamaContext(model: model, parameters: contextParam)
         guard let context else {
