@@ -83,10 +83,6 @@ jobs:
 
       - name: Build the xcframework
         working-directory: llama.cpp
-        env:
-          # Force the script not to log every compile line (it's quiet by default,
-          # but some CMake paths still emit a lot).
-          CMAKE_BUILD_PARALLEL_LEVEL: "0"
         run: |
           ./build-xcframework.sh
 
