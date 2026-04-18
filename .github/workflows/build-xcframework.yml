@@ -12,6 +12,10 @@ jobs:
   build:
     runs-on: macos-15
     timeout-minutes: 90
+    # Needed to let GITHUB_TOKEN create releases on this fork; without this
+    # `gh release create` returns HTTP 403 "Resource not accessible by integration".
+    permissions:
+      contents: write
     steps:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -120,6 +124,17 @@ jobs:
           # familiar filename shape.
           zip -r "llama-${{ inputs.llama_version }}-mtmd-xcframework.zip" llama.xcframework
           ls -la
+
+      # Belt-and-suspenders: keep the zip as a workflow artifact in case
+      # the release-creation step can't write to the repo. Artifacts are
+      # downloadable via `gh run download` for up to 90 days.
+      - name: Upload xcframework as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-${{ inputs.llama_version }}-mtmd-xcframework
+          path: llama.cpp/build-apple/llama-${{ inputs.llama_version }}-mtmd-xcframework.zip
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Compute SHA-256 checksum
         id: checksum
