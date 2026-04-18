@@ -4,7 +4,11 @@
 import PackageDescription
 
 let llamaVersion = "b8816"
-let llamaChecksum = "05228f33800db4ce9e7bd60d778fa889a944e01035aa617091dbd6d57e4c4965"
+// Custom xcframework built by .github/workflows/build-xcframework.yml with
+// LLAMA_BUILD_TOOLS=ON so libmtmd.a ships inside llama.framework alongside
+// libllama/libggml. This gives us the multimodal (clip + mtmd) APIs needed
+// for Gemma 4 vision input, which the stock ggml-org release strips out.
+let llamaChecksum = "683a07447eac381c0b11605b0ce76e792051306bd55c64a104284377782dcfd6"
 
 let package = Package(
     name: "swift-llama-cpp",
@@ -28,7 +32,7 @@ let package = Package(
         ),
         .binaryTarget(
             name: "llama",
-            url: "https://github.com/ggml-org/llama.cpp/releases/download/\(llamaVersion)/llama-\(llamaVersion)-xcframework.zip",
+            url: "https://github.com/Keep-DS/swift-llama-cpp/releases/download/\(llamaVersion)-mtmd/llama-\(llamaVersion)-mtmd-xcframework.zip",
             checksum: llamaChecksum
         ),
         .testTarget(
