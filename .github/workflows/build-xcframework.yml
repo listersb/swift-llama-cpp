@@ -83,6 +83,26 @@ jobs:
           mv build-xcframework.sh.new build-xcframework.sh
           chmod +x build-xcframework.sh
 
+          # 4b. Upstream bug: mtmd.h forward-declares `struct mtmd_decoder_pos`
+          #     but never typedefs it, while mtmd-helper.h uses the bare name
+          #     `mtmd_decoder_pos *`. In C that compiles under lax rules, but
+          #     clang rejects it when building the framework's modulemap in
+          #     strict C mode ("must use 'struct' tag"). Add the missing
+          #     typedef next to its siblings.
+          awk '
+            /^typedef struct mtmd_input_text   mtmd_input_text;$/ && !p {
+              print
+              print "typedef struct mtmd_decoder_pos  mtmd_decoder_pos;"
+              p=1; next
+            }
+            { print }
+          ' tools/mtmd/mtmd.h > tools/mtmd/mtmd.h.new
+          mv tools/mtmd/mtmd.h.new tools/mtmd/mtmd.h
+          if ! grep -q "^typedef struct mtmd_decoder_pos  mtmd_decoder_pos;$" tools/mtmd/mtmd.h; then
+            echo "::error::mtmd_decoder_pos typedef patch missed anchor"
+            exit 1
+          fi
+
           # 5. Replace tools/CMakeLists.txt so only the mtmd subdirectory is
           #    configured. With LLAMA_BUILD_TOOLS=ON the stock file also
           #    enables batched-bench, tts, llama-bench, etc. — those define
